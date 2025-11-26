@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kasir - POS System</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receipt-print, #receipt-print * {
+                visibility: visible;
+            }
+            #receipt-print {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+        }
+
+        .receipt-container {
+            font-family: 'Courier New', monospace;
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // Configure your API base URL here
+        window.API_BASE_URL = 'http://localhost/kasir/config';
+    </script>
+
+    <script type="text/babel">
+//          // Authentication Check - Add this at the very beginning of your script
+// const user = JSON.parse(localStorage.getItem('user'));
+// if (!user) {
+//     window.location.href = 'login.html';
+// }
+
+// const POSApplication = () => {
+//     // Authentication State
+//     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+    
+//     // ... your existing states remain the same ...
+
+//     // Add logout function
+//     const handleLogout = () => {
+//         localStorage.removeItem('user');
+//         window.location.href = 'login.html';
+//     };
+
+        const { useState, useEffect } = React;
+
+        // --- Lucide Icons as inline SVG components ---
+        
+        const ShoppingCart = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+        );
+
+        const Package = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+        );
+
+        const Trash2 = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+        );
+
+        const Plus = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        );
+
+        const Minus = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        );
+
+        const Printer = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+        );
+
+        const Edit = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+        );
+
+        const LayoutDashboard = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+        );
+
+        const History = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/>
+            </svg>
+        );
+
+        const Search = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+        );
+
+        const Calendar = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+        );
+
+        const POSApplication = () => {
+            const [products, setProducts] = useState([]);
+            const [customers, setCustomers] = useState([]);
+            const [cart, setCart] = useState([]);
+            const [selectedCustomer, setSelectedCustomer] = useState(null);
+            const [activeTab, setActiveTab] = useState('dashboard'); // Default to dashboard
+            const [notification, setNotification] = useState(null);
+            const [loading, setLoading] = useState(false);
+            
+            // Dashboard States
+            const [dashboardData, setDashboardData] = useState(null);
+            
+            // Product Edit States
+            const [showStockModal, setShowStockModal] = useState(false);
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [newStock, setNewStock] = useState('');
+            const [newPrice, setNewPrice] = useState('');
+
+            // Add Product States
+            const [showAddProductModal, setShowAddProductModal] = useState(false);
+            const [newProductForm, setNewProductForm] = useState({
+                NamaProduk: '',
+                Harga: '',
+                Stok: ''
+            });
+
+            // Customer States
+            const [showCustomerModal, setShowCustomerModal] = useState(false);
+            const [customerModalMode, setCustomerModalMode] = useState('add');
+            const [selectedCustomerEdit, setSelectedCustomerEdit] = useState(null);
+            const [customerForm, setCustomerForm] = useState({
+                NamaPelanggan: '',
+                Alamat: '',
+                NomorTelepon: ''
+            });
+
+            // Riwayat (History) States
+            const [transactions, setTransactions] = useState([]);
+            const [selectedTransaction, setSelectedTransaction] = useState(null);
+            const [showTransactionModal, setShowTransactionModal] = useState(false);
+            const [historyFilters, setHistoryFilters] = useState({
+                startDate: new Date().toISOString().split('T')[0], // Today
+                endDate: new Date().toISOString().split('T')[0],
+                search: ''
+            });
+            const [pagination, setPagination] = useState({
+                currentPage: 1,
+                totalItems: 0,
+                itemsPerPage: 20
+            });
+
+            const [buyerNote, setBuyerNote] = useState('');
+            const [showReceipt, setShowReceipt] = useState(false);
+            const [receiptData, setReceiptData] = useState(null);
+
+            // Load all data on initial render
+            useEffect(() => {
+                loadProducts();
+                loadCustomers();
+                loadDashboardData();
+            }, []);
+
+            // Load transactions when Riwayat tab is active
+            useEffect(() => {
+                if (activeTab === 'riwayat') {
+                    loadTransactionHistory();
+                }
+            }, [activeTab, historyFilters, pagination.currentPage]);
+            
+            // --- DATA LOADING FUNCTIONS ---
+            
+            const loadDashboardData = async () => {
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/dashboard.php`);
+                    const data = await response.json();
+                    if (data.success === false) {
+                        throw new Error(data.message || 'Gagal memuat data dashboard');
+                    }
+                    setDashboardData(data);
+                } catch (error) {
+                    console.error('Error loading dashboard:', error);
+                    setDashboardData({
+                        today_income: 0,
+                        today_count: 0,
+                        recent_transactions: [],
+                        sales_chart: []
+                    });
+                }
+            };
+
+            const loadProducts = async () => {
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/products.php?action=list`);
+                    const data = await response.json();
+                    setProducts(data);
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    setProducts([]); 
+                }
+            };
+
+            const loadCustomers = async () => {
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/customers.php?action=list`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const customers = await response.json();
+                    
+                    // Make sure it's an array
+                    if (Array.isArray(customers)) {
+                        setCustomers(customers);
+                        
+                        // Auto-select "Pelanggan Umum" if it exists
+                        const umumCustomer = customers.find(c => 
+                            c.NamaPelanggan.toLowerCase().includes('umum')
+                        );
+                        if (umumCustomer && !selectedCustomer) {
+                            setSelectedCustomer(umumCustomer);
+                        }
+                    } else {
+                        console.error('Expected array but got:', customers);
+                        setCustomers([]);
+                    }
+                } catch (error) {
+                    console.error('Failed to load customers:', error);
+                    showNotification('Gagal memuat data pelanggan', 'error');
+                    setCustomers([]);
+                }
+            };
+
+            // --- RIWAYAT/HISTORY FUNCTIONS ---
+
+            const loadTransactionHistory = async () => {
+                setLoading(true);
+                try {
+                    const { startDate, endDate, search } = historyFilters;
+                    const { currentPage, itemsPerPage } = pagination;
+                    
+                    let url = `${window.API_BASE_URL}/history.php?action=list&page=${currentPage}&limit=${itemsPerPage}`;
+                    
+                    if (startDate) url += `&start_date=${startDate}`;
+                    if (endDate) url += `&end_date=${endDate}`;
+                    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                    const response = await fetch(url);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        setTransactions(result.data || []);
+                        setPagination(prev => ({
+                            ...prev,
+                            totalItems: result.total || 0
+                        }));
+                    } else {
+                        throw new Error(result.message || 'Failed to load transactions');
+                    }
+                } catch (error) {
+                    console.error('Failed to load transaction history:', error);
+                    showNotification('Gagal memuat riwayat transaksi', 'error');
+                    setTransactions([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const loadTransactionDetail = async (transactionId) => {
+                setLoading(true);
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/history.php?action=detail&id=${transactionId}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        setSelectedTransaction(result.data);
+                        setShowTransactionModal(true);
+                    } else {
+                        throw new Error(result.message || 'Failed to load transaction details');
+                    }
+                } catch (error) {
+                    console.error('Failed to load transaction details:', error);
+                    showNotification('Gagal memuat detail transaksi', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleHistoryFilterChange = (key, value) => {
+                setHistoryFilters(prev => ({
+                    ...prev,
+                    [key]: value
+                }));
+                // Reset to first page when filters change
+                setPagination(prev => ({ ...prev, currentPage: 1 }));
+            };
+
+            const handlePageChange = (newPage) => {
+                setPagination(prev => ({ ...prev, currentPage: newPage }));
+            };
+
+            const exportTransactionHistory = async () => {
+                try {
+                    const { startDate, endDate } = historyFilters;
+                    let url = `${window.API_BASE_URL}/history.php?action=export`;
+                    if (startDate) url += `&start_date=${startDate}`;
+                    if (endDate) url += `&end_date=${endDate}`;
+
+                    window.open(url, '_blank');
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    showNotification('Gagal mengekspor data', 'error');
+                }
+            };
+            
+            // --- UTILITY FUNCTIONS ---
+
+            const showNotification = (message, type) => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), 3000);
+            };
+
+            const formatCurrency = (amount) => {
+                return `Rp. ${parseFloat(amount || 0).toLocaleString('id-ID')}`;
+            };
+
+            const formatDate = (dateString) => {
+                return new Date(dateString).toLocaleDateString('id-ID', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+            
+            // --- KASIR FUNCTIONS ---
+
+            const addToCart = (product) => {
+                if (product.Stok <= 0) {
+                    showNotification('Stok habis!', 'error');
+                    return;
+                }
+
+                const existingItem = cart.find(item => item.ProdukID === product.ProdukID);
+                
+                if (existingItem) {
+                    if (existingItem.quantity >= product.Stok) {
+                        showNotification('Stok tidak mencukupi!', 'error');
+                        return;
+                    }
+                    setCart(cart.map(item =>
+                        item.ProdukID === product.ProdukID
+                            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * parseFloat(item.Harga) }
+                            : item
+                    ));
+                } else {
+                    setCart([...cart, {
+                        ...product,
+                        quantity: 1,
+                        subtotal: parseFloat(product.Harga)
+                    }]);
+                }
+                showNotification(`${product.NamaProduk} ditambahkan ke keranjang`, 'success');
+            };
+
+            const updateQuantity = (productId, change) => {
+                const product = products.find(p => p.ProdukID === productId);
+                const cartItem = cart.find(item => item.ProdukID === productId);
+                
+                const newQuantity = cartItem.quantity + change;
+                
+                if (newQuantity <= 0) {
+                    removeFromCart(productId);
+                    return;
+                }
+                
+                if (newQuantity > product.Stok) {
+                    showNotification('Stok tidak mencukupi!', 'error');
+                    return;
+                }
+
+                setCart(cart.map(item =>
+                    item.ProdukID === productId
+                        ? { ...item, quantity: newQuantity, subtotal: newQuantity * parseFloat(item.Harga) }
+                        : item
+                ));
+            };
+
+            const removeFromCart = (productId) => {
+                setCart(cart.filter(item => item.ProdukID !== productId));
+            };
+
+            const calculateTotal = () => {
+                return cart.reduce((sum, item) => sum + item.subtotal, 0);
+            };
+
+            const handleCheckout = async () => {
+                if (cart.length === 0) {
+                    showNotification('Keranjang kosong!', 'error');
+                    return;
+                }
+
+                setLoading(true);
+                
+                try {
+                    const currentDate = new Date();
+                    const transactionId = `TRX${currentDate.getTime()}`;
+                    
+                    const response = await fetch(`${window.API_BASE_URL}/checkout.php`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            pelangganId: selectedCustomer?.PelangganID,
+                            total: calculateTotal(),
+                            note: buyerNote,
+                            items: cart.map(item => ({
+                                ProdukID: item.ProdukID,
+                                quantity: item.quantity,
+                                subtotal: item.subtotal
+                            }))
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Prepare receipt data
+                        const receipt = {
+                            transactionId: result.transactionId || transactionId,
+                            date: currentDate.toLocaleDateString('id-ID', {
+                                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            }),
+                            customer: selectedCustomer,
+                            items: cart,
+                            total: calculateTotal(),
+                            note: buyerNote
+                        };
+                        
+                        // Update product stock in frontend
+                        const updatedProducts = products.map(product => {
+                            const cartItem = cart.find(item => item.ProdukID === product.ProdukID);
+                            if (cartItem) {
+                                return { ...product, Stok: product.Stok - cartItem.quantity };
+                            }
+                            return product;
+                        });
+                        
+                        setProducts(updatedProducts);
+                        setReceiptData(receipt);
+                        setShowReceipt(true);
+                        setCart([]);
+                        setBuyerNote('');
+                        showNotification('Transaksi berhasil!', 'success');
+                        
+                        // Reload dashboard data after successful transaction
+                        loadDashboardData(); 
+
+                    } else {
+                        showNotification(result.message || 'Transaksi gagal!', 'error');
+                    }
+                } catch (error) {
+                    console.error('Checkout error:', error);
+                    showNotification('Gagal terhubung ke server (checkout.php). Transaksi Gagal disimpan.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handlePrintReceipt = () => {
+                window.print();
+            };
+
+            // --- PRODUCT MANAGEMENT FUNCTIONS ---
+
+            const openStockModal = (product) => {
+                setSelectedProduct(product);
+                setNewStock(product.Stok);
+                setNewPrice(product.Harga);
+                setShowStockModal(true);
+            };
+
+            const closeStockModal = () => {
+                setShowStockModal(false);
+                setSelectedProduct(null);
+                setNewStock('');
+                setNewPrice('');
+            };
+
+            const handleStockUpdate = async () => {
+                if (!selectedProduct || newStock === '' || newPrice === '') {
+                    showNotification('Stok dan Harga tidak boleh kosong!', 'error');
+                    return;
+                }
+
+                if (newStock < 0 || newPrice < 0) {
+                    showNotification('Nilai tidak boleh negatif!', 'error');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/products.php?action=update`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            ProdukID: selectedProduct.ProdukID,
+                            Stok: parseInt(newStock),
+                            Harga: parseFloat(newPrice)
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        setProducts(products.map(p => 
+                            p.ProdukID === selectedProduct.ProdukID 
+                                ? { ...p, Stok: parseInt(newStock), Harga: parseFloat(newPrice) }
+                                : p
+                        ));
+                        showNotification('Produk berhasil diperbarui!', 'success');
+                        closeStockModal();
+                    } else {
+                        showNotification(result.message || 'Gagal memperbarui produk', 'error');
+                    }
+                } catch (error) {
+                    console.error('Update error:', error);
+                    showNotification('Gagal terhubung ke server (products.php). Perubahan tidak tersimpan.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // --- ADD PRODUCT ---
+            
+            const handleAddProduct = async () => {
+                if (!newProductForm.NamaProduk || !newProductForm.Harga || newProductForm.Stok === '') {
+                    showNotification('Semua kolom harus diisi!', 'error');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/products.php?action=add`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newProductForm)
+                    });
+                    
+                    const result = await response.json();
+
+                    if (result.success) {
+                        loadProducts();
+                        showNotification('Produk berhasil ditambahkan!', 'success');
+                        setShowAddProductModal(false);
+                        setNewProductForm({ NamaProduk: '', Harga: '', Stok: '' });
+                    } else {
+                        showNotification(result.message || 'Gagal menambah produk', 'error');
+                    }
+                } catch (error) {
+                    console.error('Add product error:', error);
+                    showNotification('Gagal terhubung ke server (products.php). Produk gagal ditambah.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // --- CUSTOMER MANAGEMENT FUNCTIONS ---
+
+            const openAddCustomerModal = () => {
+                setCustomerModalMode('add');
+                setCustomerForm({
+                    NamaPelanggan: '',
+                    Alamat: '',
+                    NomorTelepon: ''
+                });
+                setShowCustomerModal(true);
+            };
+
+            const openEditCustomerModal = (customer) => {
+                setCustomerModalMode('edit');
+                setSelectedCustomerEdit(customer);
+                setCustomerForm({
+                    NamaPelanggan: customer.NamaPelanggan,
+                    Alamat: customer.Alamat || '',
+                    NomorTelepon: customer.NomorTelepon || ''
+                });
+                setShowCustomerModal(true);
+            };
+
+            const closeCustomerModal = () => {
+                setShowCustomerModal(false);
+                setSelectedCustomerEdit(null);
+                setCustomerForm({
+                    NamaPelanggan: '',
+                    Alamat: '',
+                    NomorTelepon: ''
+                });
+            };
+
+            const handleCustomerFormChange = (e) => {
+                setCustomerForm({
+                    ...customerForm,
+                    [e.target.name]: e.target.value
+                });
+            };
+
+            const handleCustomerSave = async () => {
+                if (!customerForm.NamaPelanggan.trim()) {
+                    showNotification('Nama pelanggan harus diisi!', 'error');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const action = customerModalMode === 'add' ? 'add' : 'update';
+                    const body = customerModalMode === 'edit' 
+                        ? { ...customerForm, PelangganID: selectedCustomerEdit.PelangganID }
+                        : customerForm;
+
+                    const response = await fetch(`${window.API_BASE_URL}/customers.php?action=${action}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        await loadCustomers();
+                        showNotification(`Pelanggan berhasil di${customerModalMode === 'add' ? 'tambahkan' : 'perbarui'}!`, 'success');
+                        closeCustomerModal();
+                    } else {
+                        showNotification(result.message || 'Gagal menyimpan pelanggan', 'error');
+                    }
+                } catch (error) {
+                    console.error('Customer save error:', error);
+                    showNotification('Gagal terhubung ke server (customers.php). Data gagal disimpan.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleCustomerDelete = async (customerId, customerName) => {
+                if (!confirm(`Apakah Anda yakin ingin menghapus pelanggan "${customerName}"?`)) {
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/customers.php?action=delete&id=${customerId}`, {
+                        method: 'GET'
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        setCustomers(customers.filter(c => c.PelangganID !== customerId));
+                        showNotification('Pelanggan berhasil dihapus!', 'success');
+                        
+                        // Re-select customer if the deleted one was selected
+                        if (selectedCustomer?.PelangganID === customerId) {
+                            setSelectedCustomer(customers.find(c => c.NamaPelanggan.toLowerCase().includes('umum')) || customers[0]);
+                        }
+                    } else {
+                        showNotification(result.message || 'Gagal menghapus pelanggan', 'error');
+                    }
+                } catch (error) {
+                    console.error('Customer delete error:', error);
+                    showNotification('Gagal terhubung ke server (customers.php). Pelanggan gagal dihapus.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100">
+                    {/* Header */}
+                    <header className="bg-gray-800 text-white p-4 shadow-lg">
+                        <div className="container mx-auto flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ShoppingCart size={24} />
+                                <h1 className="text-xl font-bold">Aplikasi Kasir</h1>
+                            </div>
+                            <nav className="flex gap-4">
+                                <button
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className={`px-4 py-2 rounded ${activeTab === 'dashboard' ? 'bg-orange-500' : 'hover:bg-gray-700'}`}
+                                >
+                                    Dashboard
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('kasir')}
+                                    className={`px-4 py-2 rounded ${activeTab === 'kasir' ? 'bg-orange-500' : 'hover:bg-gray-700'}`}
+                                >
+                                    Kasir
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('stok')}
+                                    className={`px-4 py-2 rounded ${activeTab === 'stok' ? 'bg-orange-500' : 'hover:bg-gray-700'}`}
+                                >
+                                    Manajemen Stok
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('pelanggan')}
+                                    className={`px-4 py-2 rounded ${activeTab === 'pelanggan' ? 'bg-orange-500' : 'hover:bg-gray-700'}`}
+                                >
+                                    Pelanggan
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('riwayat')}
+                                    className={`px-4 py-2 rounded ${activeTab === 'riwayat' ? 'bg-orange-500' : 'hover:bg-gray-700'}`}
+                                >
+                                    Riwayat
+                                </button>
+                            </nav>
+                        </div>
+                    </header>
+
+                    {/* Notification */}
+                    {notification && (
+                        <div className={`fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg ${
+                            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                        } text-white`}>
+                            {notification.message}
+                        </div>
+                    )}
+
+                    {/* Receipt Modal */}
+                    {showReceipt && receiptData && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-96 shadow-xl max-h-screen overflow-y-auto">
+                                <div id="receipt-print" className="receipt-container">
+                                    <div className="text-center mb-4 border-b-2 border-dashed pb-2">
+                                        <h2 className="text-xl font-bold">TOKO SAYA</h2>
+                                        <p className="text-sm">Jl. Contoh No. 123</p>
+                                        <p className="text-sm">Telp: 0812-3456-7890</p>
+                                    </div>
+
+                                    <div className="mb-4 text-sm">
+                                        <p>No: {receiptData.transactionId}</p>
+                                        <p>Tanggal: {receiptData.date}</p>
+                                        <p>Kasir: Admin</p>
+                                        <p>Pelanggan: {receiptData.customer?.NamaPelanggan || 'Umum'}</p>
+                                    </div>
+
+                                    <div className="border-t-2 border-b-2 border-dashed py-2 mb-2">
+                                        {receiptData.items.map((item, index) => (
+                                            <div key={index} className="mb-2">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="font-semibold">{item.NamaProduk}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span>{item.quantity} x {formatCurrency(item.Harga)}</span>
+                                                    <span>{formatCurrency(item.subtotal)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <div className="flex justify-between font-bold text-lg">
+                                            <span>TOTAL:</span>
+                                            <span>{formatCurrency(receiptData.total)}</span>
+                                        </div>
+                                    </div>
+
+                                    {receiptData.note && (
+                                        <div className="border-t-2 border-dashed pt-2 mb-4">
+                                            <p className="text-sm font-semibold">Catatan:</p>
+                                            <p className="text-sm">{receiptData.note}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="text-center border-t-2 border-dashed pt-2 text-sm">
+                                        <p>Terima kasih atas kunjungan Anda!</p>
+                                        <p>Barang yang sudah dibeli</p>
+                                        <p>tidak dapat dikembalikan</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-6 print-hide">
+                                    <button
+                                        onClick={() => setShowReceipt(false)}
+                                        className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                                    >
+                                        Tutup
+                                    </button>
+                                    <button
+                                        onClick={handlePrintReceipt}
+                                        className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 flex items-center justify-center gap-2"
+                                    >
+                                        <Printer size={20} />
+                                        Cetak
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Transaction Detail Modal */}
+                    {showTransactionModal && selectedTransaction && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-11/12 max-w-4xl shadow-xl max-h-screen overflow-y-auto">
+                                <h3 className="text-xl font-bold mb-4">Detail Transaksi</h3>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <p><strong>ID Transaksi:</strong> TRX{selectedTransaction.PenjualanID}</p>
+                                        <p><strong>Tanggal:</strong> {formatDate(selectedTransaction.TanggalPenjualan)}</p>
+                                    </div>
+                                    <div>
+                                        <p><strong>Pelanggan:</strong> {selectedTransaction.NamaPelanggan || 'Umum'}</p>
+                                        <p><strong>Total:</strong> {formatCurrency(selectedTransaction.TotalHarga)}</p>
+                                    </div>
+                                </div>
+
+                                <h4 className="font-bold mb-3">Item yang dibeli:</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse border">
+                                        <thead>
+                                            <tr className="bg-gray-100">
+                                                <th className="border p-2 text-left">Nama Barang</th>
+                                                <th className="border p-2 text-center">Qty</th>
+                                                <th className="border p-2 text-right">Harga</th>
+                                                <th className="border p-2 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedTransaction.items && selectedTransaction.items.map((item, index) => (
+                                                <tr key={index} className="border">
+                                                    <td className="border p-2">{item.NamaBarang}</td>
+                                                    <td className="border p-2 text-center">{item.Jumlah}</td>
+                                                    <td className="border p-2 text-right">{formatCurrency(item.HargaJual)}</td>
+                                                    <td className="border p-2 text-right">{formatCurrency(item.Subtotal)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="flex justify-end mt-6">
+                                    <button
+                                        onClick={() => setShowTransactionModal(false)}
+                                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Stock & Price Update Modal */}
+                    {showStockModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+                                <h3 className="text-xl font-bold mb-4">Edit Produk</h3>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Nama Produk
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={selectedProduct?.NamaProduk || ''}
+                                        disabled
+                                        className="w-full p-2 border rounded bg-gray-100"
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Harga Satuan (Rp) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newPrice}
+                                        onChange={(e) => setNewPrice(e.target.value)}
+                                        min="0"
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Masukkan harga baru"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Stok *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newStock}
+                                        onChange={(e) => setNewStock(e.target.value)}
+                                        min="0"
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Masukkan stok baru"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Stok saat ini: {selectedProduct?.Stok}</p>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={closeStockModal}
+                                        disabled={loading}
+                                        className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600 disabled:bg-gray-300"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={handleStockUpdate}
+                                        disabled={loading}
+                                        className="flex-1 bg-orange-500 text-white py-2 rounded hover:bg-orange-600 disabled:bg-gray-300"
+                                    >
+                                        {loading ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Product Modal */}
+                    {showAddProductModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+                                <h3 className="text-xl font-bold mb-4">Tambah Produk Baru</h3>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Nama Produk *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newProductForm.NamaProduk}
+                                        onChange={(e) => setNewProductForm({...newProductForm, NamaProduk: e.target.value})}
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Contoh: Kopi Hitam"
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Harga (Rp) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newProductForm.Harga}
+                                        onChange={(e) => setNewProductForm({...newProductForm, Harga: e.target.value})}
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Contoh: 15000"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Stok Awal *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newProductForm.Stok}
+                                        onChange={(e) => setNewProductForm({...newProductForm, Stok: e.target.value})}
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Contoh: 100"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowAddProductModal(false)}
+                                        disabled={loading}
+                                        className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600 disabled:bg-gray-300"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={handleAddProduct}
+                                        disabled={loading}
+                                        className="flex-1 bg-orange-500 text-white py-2 rounded hover:bg-orange-600 disabled:bg-gray-300"
+                                    >
+                                        {loading ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Customer Add/Edit Modal */}
+                    {showCustomerModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+                                <h3 className="text-xl font-bold mb-4">
+                                    {customerModalMode === 'add' ? 'Tambah Pelanggan Baru' : 'Edit Pelanggan'}
+                                </h3>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Nama Pelanggan *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="NamaPelanggan"
+                                        value={customerForm.NamaPelanggan}
+                                        onChange={handleCustomerFormChange}
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Masukkan nama pelanggan"
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Alamat
+                                    </label>
+                                    <textarea
+                                        name="Alamat"
+                                        value={customerForm.Alamat}
+                                        onChange={handleCustomerFormChange}
+                                        rows="3"
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Masukkan alamat (opsional)"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                                        Nomor Telepon
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="NomorTelepon"
+                                        value={customerForm.NomorTelepon}
+                                        onChange={handleCustomerFormChange}
+                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Masukkan nomor telepon (opsional)"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={closeCustomerModal}
+                                        disabled={loading}
+                                        className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600 disabled:bg-gray-300"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={handleCustomerSave}
+                                        disabled={loading}
+                                        className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+                                    >
+                                        {loading ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Main Content */}
+                    <main className="container mx-auto p-4">
+                        
+                        {/* --- DASHBOARD TAB --- */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-6">
+                                <h2 className="text-3xl font-bold mb-4 flex items-center gap-3 text-gray-800">
+                                    <LayoutDashboard size={30} />
+                                    Ringkasan Dashboard
+                                </h2>
+
+                                {dashboardData && dashboardData.sales_chart ? (
+                                    <>
+                                        {/* Card Stats */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            
+                                            {/* Card 1: Income Today */}
+                                            <div className="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+                                                <p className="text-sm font-medium text-gray-500">Pemasukan Hari Ini</p>
+                                                <p className="text-3xl font-bold text-green-600 mt-1">
+                                                    {formatCurrency(dashboardData.today_income)}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mt-2">dari {dashboardData.today_count} Transaksi</p>
+                                            </div>
+
+                                            {/* Card 2: Total Products */}
+                                            <div className="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+                                                <p className="text-sm font-medium text-gray-500">Total Produk Aktif</p>
+                                                <p className="text-3xl font-bold text-blue-600 mt-1">
+                                                    {products.length}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mt-2">Produk tersedia</p>
+                                            </div>
+
+                                            {/* Card 3: Total Customers */}
+                                            <div className="bg-white rounded-xl shadow p-6 border-l-4 border-orange-500">
+                                                <p className="text-sm font-medium text-gray-500">Total Pelanggan</p>
+                                                <p className="text-3xl font-bold text-orange-600 mt-1">
+                                                    {customers.length}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mt-2">Terdaftar</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Chart/Sales 7 Days (Simple Bar Chart Visualization) */}
+                                        <div className="bg-white rounded-xl shadow p-6">
+                                            <h3 className="text-xl font-bold mb-6">Penjualan 7 Hari Terakhir (Rp)</h3>
+                                            
+                                            <div className="h-64 flex items-end justify-around border-b border-l pb-1 text-xs">
+                                                {dashboardData.sales_chart.length > 0 ? (
+                                                    // Simple bar chart logic
+                                                    dashboardData.sales_chart.map((day, index) => {
+                                                        const maxTotal = Math.max(...dashboardData.sales_chart.map(d => parseFloat(d.total)));
+                                                        const heightPercentage = (parseFloat(day.total) / maxTotal) * 90; 
+                                                        return (
+                                                            <div key={index} className="flex flex-col items-center justify-end w-1/7 h-full px-1">
+                                                                <span className="mb-1 text-gray-700 font-medium text-center transform -translate-y-full text-[10px]">
+                                                                    {parseFloat(day.total) > 0 ? formatCurrency(day.total) : ''}
+                                                                </span>
+                                                                <div 
+                                                                    className="w-3/4 bg-blue-500 hover:bg-blue-600 transition-all duration-300 rounded-t"
+                                                                    style={{ height: `${heightPercentage}%`, minHeight: '3px' }}
+                                                                    title={`${day.tanggal}: ${formatCurrency(day.total)}`}
+                                                                ></div>
+                                                                <span className="mt-1 text-gray-500 text-center text-[10px] whitespace-nowrap">
+                                                                    {new Date(day.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <p className="text-gray-500 py-10 w-full text-center">Belum ada data penjualan 7 hari terakhir.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Recent Transactions */}
+                                        <div className="bg-white rounded-xl shadow p-6">
+                                            <h3 className="text-xl font-bold mb-4">10 Riwayat Transaksi Terakhir</h3>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full">
+                                                    <thead className="bg-gray-200">
+                                                        <tr>
+                                                            <th className="p-3 text-left">ID Transaksi</th>
+                                                            <th className="p-3 text-left">Tanggal</th>
+                                                            <th className="p-3 text-left">Pelanggan</th>
+                                                            <th className="p-3 text-right">Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {dashboardData.recent_transactions.map(trx => (
+                                                            <tr key={trx.PenjualanID} className="border-b hover:bg-gray-50">
+                                                                <td className="p-3">TRX{trx.PenjualanID}</td>
+                                                                <td className="p-3">{new Date(trx.TanggalPenjualan).toLocaleDateString('id-ID')}</td>
+                                                                <td className="p-3">{trx.NamaPelanggan || 'Umum'}</td>
+                                                                <td className="p-3 text-right font-semibold text-green-600">{formatCurrency(trx.TotalHarga)}</td>
+                                                            </tr>
+                                                        ))}
+                                                        {dashboardData.recent_transactions.length === 0 && (
+                                                            <tr><td colSpan="4" className="p-3 text-center text-gray-500">Belum ada riwayat transaksi.</td></tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-10 bg-white rounded-lg shadow-lg">
+                                        <p className="text-gray-500">Gagal memuat data Dashboard. Pastikan file **dashboard.php** dan koneksi database berfungsi.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* --- KASIR TAB --- */}
+                        {activeTab === 'kasir' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Products Section */}
+                                <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+                                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                                        <Package size={24} />
+                                        Daftar Produk
+                                    </h2>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        {products.map(product => (
+                                            <div
+                                                key={product.ProdukID}
+                                                className={`border rounded-lg p-4 ${
+                                                    product.Stok > 0 ? 'hover:shadow-md cursor-pointer' : 'opacity-50'
+                                                } transition`}
+                                                onClick={() => product.Stok > 0 && addToCart(product)}
+                                            >
+                                                <h3 className="font-semibold text-lg mb-2">{product.NamaProduk}</h3>
+                                                <p className="text-gray-600 mb-1">{formatCurrency(product.Harga)}</p>
+                                                <p className={`text-sm ${product.Stok > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    Stok: {product.Stok}
+                                                </p>
+                                            </div>
+                                        ))}
+                                        {products.length === 0 && (
+                                            <div className="col-span-3 text-center py-8 text-gray-500">
+                                                Tidak ada produk yang tersedia.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Cart Section */}
+                                <div className="bg-white rounded-lg shadow-lg p-6">
+                                    <h2 className="text-2xl font-bold mb-4">Keranjang</h2>
+                                    
+                                    {/* Customer Selection */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Pilih Pelanggan</label>
+                                        <select
+                                            value={selectedCustomer?.PelangganID || ''}
+                                            onChange={(e) => setSelectedCustomer(customers.find(c => c.PelangganID === parseInt(e.target.value)))}
+                                            className="w-full p-2 border rounded"
+                                        >
+                                            {customers.map(customer => (
+                                                <option key={customer.PelangganID} value={customer.PelangganID}>
+                                                    {customer.NamaPelanggan}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Buyer Note */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Catatan Pembeli</label>
+                                        <textarea
+                                            value={buyerNote}
+                                            onChange={(e) => setBuyerNote(e.target.value)}
+                                            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            rows="2"
+                                            placeholder="Tambahkan catatan (opsional)"
+                                        />
+                                    </div>
+
+                                    {/* Cart Items */}
+                                    <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                                        {cart.length === 0 ? (
+                                            <p className="text-gray-500 text-center py-8">Keranjang kosong</p>
+                                        ) : (
+                                            cart.map(item => (
+                                                <div key={item.ProdukID} className="border rounded p-3">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <h4 className="font-medium">{item.NamaProduk}</h4>
+                                                        <button
+                                                            onClick={() => removeFromCart(item.ProdukID)}
+                                                            className="text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => updateQuantity(item.ProdukID, -1)}
+                                                                className="bg-gray-200 rounded p-1 hover:bg-gray-300"
+                                                            >
+                                                                <Minus size={16} />
+                                                            </button>
+                                                            <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                                            <button
+                                                                onClick={() => updateQuantity(item.ProdukID, 1)}
+                                                                className="bg-gray-200 rounded p-1 hover:bg-gray-300"
+                                                            >
+                                                                <Plus size={16} />
+                                                            </button>
+                                                        </div>
+                                                        <span className="font-semibold">{formatCurrency(item.subtotal)}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* Total and Checkout */}
+                                    <div className="border-t pt-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-xl font-bold">Total:</span>
+                                            <span className="text-2xl font-bold text-green-600">
+                                                {formatCurrency(calculateTotal())}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={handleCheckout}
+                                            disabled={cart.length === 0 || loading}
+                                            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                                        >
+                                            {loading ? 'Memproses...' : 'Bayar'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- MANAJEMEN STOK TAB --- */}
+                        {activeTab === 'stok' && (
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-2xl font-bold">Manajemen Stok & Harga</h2>
+                                    <button
+                                        onClick={() => setShowAddProductModal(true)}
+                                        className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 flex items-center gap-2"
+                                    >
+                                        <Plus size={20} />
+                                        Tambah Produk
+                                    </button>
+                                </div>
+                                
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-200">
+                                            <tr>
+                                                <th className="p-3 text-left">Nama Produk</th>
+                                                <th className="p-3 text-left">Stok Saat Ini</th>
+                                                <th className="p-3 text-left">Harga</th>
+                                                <th className="p-3 text-left">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {products.map(product => (
+                                                <tr key={product.ProdukID} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3">{product.NamaProduk}</td>
+                                                    <td className="p-3">
+                                                        <span className={product.Stok === 0 ? 'text-red-600 font-semibold' : product.Stok < 10 ? 'text-orange-600 font-semibold' : ''}>
+                                                            {product.Stok}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3">{formatCurrency(product.Harga)}</td>
+                                                    <td className="p-3">
+                                                        <button 
+                                                            onClick={() => openStockModal(product)}
+                                                            className="bg-orange-500 text-white px-4 py-1 rounded hover:bg-orange-600 transition flex items-center gap-2"
+                                                        >
+                                                            <Edit size={16} />
+                                                            Edit
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {products.length === 0 && (
+                                                <tr><td colSpan="4" className="p-3 text-center text-gray-500">Tidak ada data produk.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- PELANGGAN TAB --- */}
+                        {activeTab === 'pelanggan' && (
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-2xl font-bold">Daftar Pelanggan</h2>
+                                    <button
+                                        onClick={openAddCustomerModal}
+                                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
+                                    >
+                                        <Plus size={20} />
+                                        Tambah Pelanggan
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-200">
+                                            <tr>
+                                                <th className="p-3 text-left">Nama Pelanggan</th>
+                                                <th className="p-3 text-left">Alamat</th>
+                                                <th className="p-3 text-left">Nomor Telepon</th>
+                                                <th className="p-3 text-left">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {customers.map(customer => (
+                                                <tr key={customer.PelangganID} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3 font-medium">{customer.NamaPelanggan}</td>
+                                                    <td className="p-3 text-gray-600">{customer.Alamat || '-'}</td>
+                                                    <td className="p-3">{customer.NomorTelepon || '-'}</td>
+                                                    <td className="p-3">
+                                                        <button 
+                                                            onClick={() => openEditCustomerModal(customer)}
+                                                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 mr-2 transition"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleCustomerDelete(customer.PelangganID, customer.NamaPelanggan)}
+                                                            disabled={loading || customer.PelangganID === 1} 
+                                                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-300 transition"
+                                                            title={customer.PelangganID === 1 ? 'Pelanggan Umum tidak bisa dihapus' : 'Hapus Pelanggan'}
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {customers.length === 0 && (
+                                        <div className="text-center py-8 text-gray-500">
+                                            Belum ada data pelanggan. Klik tombol "Tambah Pelanggan" untuk menambah data.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- RIWAYAT TAB --- */}
+                        {activeTab === 'riwayat' && (
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                                        <History size={24} />
+                                        Riwayat Transaksi
+                                    </h2>
+                                    <button
+                                        onClick={exportTransactionHistory}
+                                        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
+                                    >
+                                        <Printer size={20} />
+                                        Ekspor
+                                    </button>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Tanggal Mulai</label>
+                                        <div className="relative">
+                                            <Calendar size={16} className="absolute left-3 top-3 text-gray-400" />
+                                            <input
+                                                type="date"
+                                                value={historyFilters.startDate}
+                                                onChange={(e) => handleHistoryFilterChange('startDate', e.target.value)}
+                                                className="w-full p-2 pl-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Tanggal Akhir</label>
+                                        <div className="relative">
+                                            <Calendar size={16} className="absolute left-3 top-3 text-gray-400" />
+                                            <input
+                                                type="date"
+                                                value={historyFilters.endDate}
+                                                onChange={(e) => handleHistoryFilterChange('endDate', e.target.value)}
+                                                className="w-full p-2 pl-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Cari</label>
+                                        <div className="relative">
+                                            <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={historyFilters.search}
+                                                onChange={(e) => handleHistoryFilterChange('search', e.target.value)}
+                                                className="w-full p-2 pl-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Cari transaksi..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <button
+                                            onClick={loadTransactionHistory}
+                                            disabled={loading}
+                                            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+                                        >
+                                            {loading ? 'Memuat...' : 'Filter'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Transactions Table */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-200">
+                                            <tr>
+                                                <th className="p-3 text-left">ID Transaksi</th>
+                                                <th className="p-3 text-left">Tanggal</th>
+                                                <th className="p-3 text-left">Pelanggan</th>
+                                                <th className="p-3 text-right">Jumlah Item</th>
+                                                <th className="p-3 text-right">Total</th>
+                                                <th className="p-3 text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {transactions.map(transaction => (
+                                                <tr key={transaction.PenjualanID} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3 font-medium">TRX{transaction.PenjualanID}</td>
+                                                    <td className="p-3">{formatDate(transaction.TanggalPenjualan)}</td>
+                                                    <td className="p-3">{transaction.NamaPelanggan || 'Umum'}</td>
+                                                    <td className="p-3 text-right">{transaction.JumlahItem || 0}</td>
+                                                    <td className="p-3 text-right font-semibold text-green-600">
+                                                        {formatCurrency(transaction.TotalHarga)}
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <button
+                                                            onClick={() => loadTransactionDetail(transaction.PenjualanID)}
+                                                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
+                                                        >
+                                                            Detail
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {transactions.length === 0 && !loading && (
+                                                <tr>
+                                                    <td colSpan="6" className="p-6 text-center text-gray-500">
+                                                        Tidak ada data transaksi untuk periode yang dipilih.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {loading && (
+                                                <tr>
+                                                    <td colSpan="6" className="p-6 text-center text-gray-500">
+                                                        Memuat data...
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Pagination */}
+                                {pagination.totalItems > 0 && (
+                                    <div className="flex justify-between items-center mt-6">
+                                        <div className="text-sm text-gray-600">
+                                            Menampilkan {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} -{' '}
+                                            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} dari{' '}
+                                            {pagination.totalItems} transaksi
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                                                disabled={pagination.currentPage === 1}
+                                                className="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
+                                            >
+                                                Sebelumnya
+                                            </button>
+                                            <span className="px-3 py-1 bg-blue-500 text-white rounded">
+                                                {pagination.currentPage}
+                                            </span>
+                                            <button
+                                                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                                                disabled={pagination.currentPage * pagination.itemsPerPage >= pagination.totalItems}
+                                                className="bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
+                                            >
+                                                Selanjutnya
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        // Render the application
+        ReactDOM.render(<POSApplication />, document.getElementById('root'));
+    </script>
+</body>
+</html>
